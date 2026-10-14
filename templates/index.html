@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sales Analytics Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Sales Analytics Dashboard</h1>
+      <p>Retail orders, January 2015 to December 2018, with a forecast for 2019.</p>
+    </header>
+
+    <section class="kpis">
+      <div class="kpi"><span class="kpi-label">Total sales</span><span class="kpi-value" id="total">–</span></div>
+      <div class="kpi"><span class="kpi-label">Orders</span><span class="kpi-value" id="orders">–</span></div>
+      <div class="kpi"><span class="kpi-label">Average order</span><span class="kpi-value" id="avg">–</span></div>
+      <div class="kpi"><span class="kpi-label">Top category</span><span class="kpi-value" id="top">–</span></div>
+    </section>
+
+    <section class="panel">
+      <h2>Monthly sales and 2019 forecast</h2>
+      <p class="note">The dashed lines are predictions. Hover over the chart to see exact values.</p>
+      <div class="chart-box tall"><canvas id="monthlyChart"></canvas></div>
+    </section>
+
+    <section class="panel">
+      <h2>How accurate is the forecast?</h2>
+      <p class="note">Both models were trained on 2015 to 2017 and asked to predict 2018, which they had never seen.</p>
+      <div class="models">
+        <div class="model">
+          <span class="swatch linear"></span>
+          <div>
+            <span class="model-name">Straight-line trend</span>
+            <span class="model-value" id="linMae">–</span>
+            <span class="model-sub">average error per month</span>
+          </div>
+        </div>
+        <div class="model">
+          <span class="swatch seasonal"></span>
+          <div>
+            <span class="model-name">Trend + seasonality</span>
+            <span class="model-value" id="seaMae">–</span>
+            <span class="model-sub">average error per month</span>
+          </div>
+        </div>
+      </div>
+      <p class="verdict" id="verdict"></p>
+    </section>
+
+    <div class="grid-2">
+      <section class="panel">
+        <h2>Sales by category</h2>
+        <div class="chart-box"><canvas id="categoryChart"></canvas></div>
+      </section>
+      <section class="panel">
+        <h2>Sales by region</h2>
+        <div class="chart-box"><canvas id="regionChart"></canvas></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const COLORS = { actual: "#0E6F6A", seasonal: "#D9822B", linear: "#8A94A3" };
+    const money = n => "$" + Math.round(n).toLocaleString("en-US");
+    const moneyK = n => "$" + Math.round(n / 1000) + "k";
+    const getJSON = async url => (await fetch(url)).json();
+
+    Chart.defaults.font.family = '"Instrument Sans", system-ui, sans-serif';
+    Chart.defaults.color = "#5E6B7A";
+
+    async function loadDashboard() {
+      const [summary, monthly, fc, cat, reg] = await Promise.all([
+        getJSON("/api/summary"), getJSON("/api/sales/monthly"), getJSON("/api/forecast"),
+        getJSON("/api/sales/by-category"), getJSON("/api/sales/by-region"),
+      ]);
+
+      // KPIs
+      document.getElementById("total").textContent = money(summary.total_sales);
+      document.getElementById("orders").textContent = summary.orders.toLocaleString();
+      document.getElementById("avg").textContent = money(summary.avg_order_value);
+      document.getElementById("top").textContent = summary.top_category;
+
+      // Model comparison
+      const lin = fc.metrics.linear, sea = fc.metrics.seasonal;
+      document.getElementById("linMae").textContent = money(lin.mae);
+      document.getElementById("seaMae").textContent = money(sea.mae);
+      const change = (lin.mae - sea.mae) / lin.mae * 100;
+      document.getElementById("verdict").textContent = change > 0
+        ? `Adding seasonality cut the average error by ${change.toFixed(0)}%.`
+        : `Adding seasonality did not reduce the error on this test (${Math.abs(change).toFixed(0)}% higher).`;
+
+      // Main chart: actual + two forecasts
+      const pad = new Array(monthly.values.length - 1).fill(null);
+      const last = monthly.values[monthly.values.length - 1];
+      const bridge = vals => [...pad, last, ...vals];   // joins each forecast to the last real point
+
+      new Chart(document.getElementById("monthlyChart"), {
+        type: "line",
+        data: {
+          labels: [...monthly.labels, ...fc.labels],
+          datasets: [
+            { label: "Actual sales", data: monthly.values, borderColor: COLORS.actual,
+              backgroundColor: "rgba(14,111,106,0.08)", fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+            { label: "Straight-line forecast", data: bridge(fc.linear), borderColor: COLORS.linear,
+              borderDash: [6, 5], tension: 0.3, borderWidth: 2, pointRadius: 0 },
+            { label: "Seasonal forecast", data: bridge(fc.seasonal), borderColor: COLORS.seasonal,
+              borderDash: [6, 5], tension: 0.3, borderWidth: 2.5, pointRadius: 0 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "top", align: "start", labels: { boxWidth: 14, boxHeight: 3 } },
+            tooltip: { callbacks: { label: c => c.parsed.y === null ? null : `${c.dataset.label}: ${money(c.parsed.y)}` } },
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: moneyK }, grid: { color: "#E3E7EC" }, border: { display: false } },
+            x: { ticks: { maxTicksLimit: 10, maxRotation: 0 }, grid: { display: false } },
+          },
+        },
+      });
+
+      // Category doughnut
+      new Chart(document.getElementById("categoryChart"), {
+        type: "doughnut",
+        data: { labels: cat.labels, datasets: [{ data: cat.values,
+          backgroundColor: [COLORS.actual, COLORS.seasonal, COLORS.linear], borderWidth: 2, borderColor: "#fff" }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: "62%",
+          plugins: { legend: { position: "bottom" },
+                     tooltip: { callbacks: { label: c => `${c.label}: ${money(c.parsed)}` } } },
+        },
+      });
+
+      // Region bars
+      new Chart(document.getElementById("regionChart"), {
+        type: "bar",
+        data: { labels: reg.labels, datasets: [{ data: reg.values, backgroundColor: COLORS.actual, borderRadius: 4 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false },
+                     tooltip: { callbacks: { label: c => money(c.parsed.y) } } },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: moneyK }, grid: { color: "#E3E7EC" }, border: { display: false } },
+            x: { grid: { display: false } },
+          },
+        },
+      });
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+:root {
+  --bg: #F4F5F7;
+  --surface: #FFFFFF;
+  --ink: #1B2430;
+  --muted: #5E6B7A;
+  --line: #E3E7EC;
+  --actual: #0E6F6A;
+  --seasonal: #D9822B;
+  --linear: #8A94A3;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+.wrap { max-width: 1100px; margin: 0 auto; padding: 36px 20px 64px; }
+
+header h1 { margin: 0 0 4px; font-size: 1.9rem; font-weight: 600; letter-spacing: -0.02em; }
+header p { margin: 0; color: var(--muted); }
+
+.kpis {
+  display: flex; flex-wrap: wrap; gap: 12px 48px;
+  margin: 28px 0 24px; padding: 20px 0;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.kpi { display: flex; flex-direction: column; }
+.kpi-label { font-size: 0.85rem; color: var(--muted); }
+.kpi-value { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+.panel h2 { margin: 0 0 4px; font-size: 1.05rem; font-weight: 600; }
+.note { margin: 0 0 16px; color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
+
+.chart-box { position: relative; height: 280px; }
+.chart-box.tall { height: 380px; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+.grid-2 .panel { margin-bottom: 0; }
+
+.models { display: flex; flex-wrap: wrap; gap: 16px 56px; margin-top: 8px; }
+.model { display: flex; align-items: flex-start; gap: 12px; }
+.swatch { width: 4px; align-self: stretch; border-radius: 2px; }
+.swatch.linear { background: var(--linear); }
+.swatch.seasonal { background: var(--seasonal); }
+.model-name { display: block; font-size: 0.9rem; color: var(--muted); }
+.model-value { display: block; font-size: 1.5rem; font-weight: 600; }
+.model-sub { display: block; font-size: 0.8rem; color: var(--muted); }
+
+.verdict { margin: 18px 0 0; font-weight: 500; }
+
+@media (max-width: 600px) {
+  .kpis { gap: 16px 32px; }
+  .panel { padding: 18px 16px; }
+  .chart-box.tall { height: 300px; }
+}
+
+/* Deep teal-to-navy background */
+body {
+  background: linear-gradient(160deg, #0C3B3A 0%, #12504C 50%, #1B3A5C 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* Light text for the parts that sit directly on the background */
+header h1 { color: #FFFFFF; }
+header p { color: #B7D4D1; }
+
+.kpis { border-top-color: rgba(255, 255, 255, 0.2); border-bottom-color: rgba(255, 255, 255, 0.2); }
+.kpi-label { color: #A9CBC7; }
+.kpi-value { color: #FFFFFF; }
+
+/* Slightly stronger card edge so they lift off the dark background */
+.panel { border-color: transparent; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); }
