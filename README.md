@@ -2,6 +2,9 @@
 
 A web dashboard that turns raw retail sales data into charts and a 12-month sales forecast.
 
+
+   **Live demo:** https://sales-analytics-dashboard-pnix.onrender.com/ (free hosting, so the first load can take about a minute)
+
 ![Dashboard: KPIs and 2019 forecast](screenshot-1.png)
 ![Dashboard: model comparison, category and region charts](screenshot-2.png)
 
